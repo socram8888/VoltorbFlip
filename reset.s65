@@ -1,0 +1,43 @@
+
+reset_handler:
+	; Init code from https://wiki.nesdev.com/w/index.php/Init_code
+	sei			; Disable interrupts
+	cld			; Disable decimal mode
+
+	ldx #$40	; Disable APU frame IRQ
+	sta JOY2
+
+	ldx #$FF	; Setup stack
+	txs
+
+	inx
+	stx PPUCTRL	; Disable NMI
+	stx PPUMASK	; Disable rendering
+	stx DMCFREQ; Disable DMC IRQs
+
+	; Clear RAM
+	txa
+-	sta $0000,x
+	; No need to clear stack
+	sta $0200,x
+	sta $0300,x
+	sta $0400,x
+	sta $0500,x
+	sta $0600,x
+	sta $0700,x
+	inx
+	bne -
+
+	; Wait one frame
+-	bit PPUSTATUS
+	bpl -
+
+	; Enable rendering again
+	lda #$1E
+	sta maskval
+
+	; Enable NMIs
+	lda #$80
+	sta PPUCTRL
+
+	jmp $

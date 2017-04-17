@@ -1,0 +1,14 @@
+
+; *********************
+; * INTERRUPT VECTORS *
+; *********************
+org $FFFA
+
+; NMI handler
+dw nmi_handler
+
+; Reset handler
+dw reset_handler
+
+; IRQ handler - none for now
+dw 0

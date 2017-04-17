@@ -1,0 +1,30 @@
+
+; ***************
+; * iNES header *
+; ***************
+
+; Signature
+db "NES", $1A
+
+; PRG-ROM chunks
+db $01
+
+; CHR-ROM chunks
+db $01
+
+; Horizontal mirroring, no save RAM, no trainer, mapper 0
+db $00
+
+; Unused
+db $00, $00, $00, $00, $00, $00, $00, $00, $00
+
+; ***********
+; * PROGRAM *
+; ***********
+include "prg.s65"
+
+; ***********
+; * CHR ROM *
+; ***********
+base $40020
+incbin "chr.bin"

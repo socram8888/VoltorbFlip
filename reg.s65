@@ -1,0 +1,52 @@
+
+; *****************
+; * PPU registers *
+; *****************
+PPUCTRL = $2000
+PPUMASK = $2001
+PPUSTATUS = $2002
+OAMADDR = $2003
+OAMDATA = $2004
+PPUSCROLL = $2005
+PPUADDR = $2006
+PPUDATA = $2007
+OAMDMA = $4014
+
+; *******************
+; * Audio registers *
+; *******************
+SNDCHN = $4015
+
+; Square wave 1
+SQ1VOL = $4000
+SQ1SWEEP = $4001
+SQ1LO = $4002
+SQ1HI = $4003
+
+; Square wave 2
+SQ2VOL = $4004
+SQ2SWEEP = $4005
+SQ2LO = $4006
+SQ2HI = $4007
+
+; Triangle
+TRILINEAR = $4008
+TRILO = $400A
+TRIHI = $400B
+
+; Noise
+NOISEVOL = $400C
+NOISELO = $400E
+NOISEHI = $400F
+
+; Delta-modulation channel (DMC)
+DMCFREQ = $4010
+DMCRAW = $4011
+DMCSTART = $4012
+DMCLEN = $4013
+
+; *************
+; * Joysticks *
+; *************
+JOY1 = $4016
+JOY2 = $4017

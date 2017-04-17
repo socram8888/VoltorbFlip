@@ -1,0 +1,35 @@
+
+; **************
+; * PAGE 0 RAM *
+; **************
+enum $000
+	; Indirect-addressing for NMI handler
+	nmiind: dsb 2
+
+	; Buttons pressed on each pad
+	joy1pressed: dsb 1
+	joy2pressed: dsb 1
+
+	; Frame counter - incremented every frame
+	framectr: dsb 1
+
+	; Shadow PPU values - updated during VBlank
+	maskval: dsb 1
+
+	; New scroll values. Scroll is updated during VBlank only if "setscroll" is nonzero.
+	setscroll: dsb 1
+	scrollx: dsb 1
+	scrolly: dsb 1
+
+	; Keep last good known scroll values
+	; Workaround for scroll being corrupted in PPU by writes to PPUADDR
+	lastscrollx: dsb 1
+	lastscrolly: dsb 1
+
+	; Non-zero if the NMI handler has to update OAM data
+	updateoam: dsb 1
+
+	; PPU buffer positions
+	ppubufpos: dsb 1
+	nmippubufpos: dsb 1
+ende

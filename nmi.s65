@@ -1,0 +1,177 @@
+
+; ***************
+; * NMI HANDLER *
+; ***************
+nmi_handler:
+	; Save registers
+	pha
+	txa
+	pha
+	tya
+	pha
+
+	; Increment frame counter
+	inc framectr
+
+	; Reset PPU address and VBlank flag
+	lda PPUSTATUS
+
+	; Enable/disable PPU rendering
+	lda maskval
+	sta PPUMASK
+
+	; *****************
+	; * Load PPU data *
+	; *****************
+	;
+	; This is an implementation of the PPU buffer explained in "The frame
+	; and NMIs" by Disch
+	;
+	; Page 3 ($0300-$03FF) is used as a circular buffer, with the main thread
+	; writing (using ppubufpos as index) and the NMI thread reading (using
+	; nmippubufpos as index)
+	;
+	; Each entry is formed by:
+	;  - Byte 0: number of bytes to copy
+	;  - Byte 1: higher address nibble
+	;  - Byte 2: lower address nibble
+	;  - Byte 3: flags
+	;    - Bit 7: if set, data is copied from ROM, otherwise RAM
+	;    - Bit 2: if set, increment is 32 (vertical), otherwise 1 (horizontal)
+	;  - Byte 4...n: ROM address if B1.7 is set, otherwise data
+@nextppuload:
+	ldy nmippubufpos
+
+@nextppu:
+	; Load entry size, quit if zero
+	ldx $300,Y
+	beq @ppubufend
+	iny
+
+	; Load high address
+	lda $300,Y
+	iny
+	sta PPUADDR
+
+	; Load low address
+	lda $300,Y
+	iny
+	sta PPUADDR
+
+	; Set write increment
+	lda $300,Y
+	and #$04
+	sta PPUCTRL
+
+	; Check copy source
+	lda $300,Y
+	iny
+	bmi @fromrom
+
+	; Copy from RAM
+-	lda $300,Y
+	sta PPUDATA
+	iny
+	dex
+	bne -
+
+	sty nmippubufpos
+	jmp @nextppu
+
+@fromrom:
+	lda $300,Y
+	iny
+	sta nmiind+0
+
+	lda $300,Y
+	iny
+	sta nmiind+1
+
+	sty nmippubufpos
+	ldy #0
+
+-	lda (nmiind),Y
+	sta PPUDATA
+	iny
+	dex
+	bne -
+
+	jmp @nextppuload
+
+@ppubufend:
+
+	; ***********
+	; * Sprites *
+	; ***********
+
+	; Update sprite data if needed
+	lda updateoam
+	beq +
+	lda #0
+	sta updateoam
+	sta OAMADDR
+	lda #2
+	sta OAMDMA
++:
+
+	; ***************
+	; * Controllers *
+	; ***************
+
+	; Read controllers using NESdev ring trick
+	ldx #1
+	stx joy2pressed
+
+	; Strobe shift register
+	stx JOY1
+	dex
+	stx JOY1
+
+	; Read controllers
+-	lda JOY1
+	lsr A
+	rol joy1pressed
+	lda JOY2
+	lsr A
+	rol joy2pressed
+	bcc -
+
+	; *************
+	; * Scrolling *
+	; *************
+
+	; We must check if the scroll position has been completely updated to avoid graphical glitches
+	lda setscroll
+	beq @uselastscroll
+	lda #0
+	sta setscroll
+
+	; Update scroll, and save for later frames
+	lda scrollx
+	sta lastscrollx
+	sta PPUSCROLL
+	lda scrolly
+	sta lastscrolly
+	sta PPUSCROLL
+	jmp @updatedscroll
+
+	; Write last good known scroll position
+	; Must be after the last write to PPUADDR due to hardware errata
+@uselastscroll:
+	lda lastscrollx
+	sta PPUSCROLL
+	lda lastscrolly
+	sta PPUSCROLL
+@updatedscroll:
+
+	; Re-enable NMI interruptions
+	lda #$80
+	sta PPUCTRL
+
+	; Restore and return
+	pla
+	tay
+	pla
+	tax
+	pla
+	rti

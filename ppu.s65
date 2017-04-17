@@ -1,0 +1,17 @@
+
+waitvblank:
+	lda framectr
+-	cmp framectr
+	beq -
+
+	rts
+
+displayon:
+	lda #$1E
+	sta ppumaskval
+	jmp waitvblank
+
+displayoff:
+	lda #$00
+	sta ppumaskval
+	jmp waitvblank
