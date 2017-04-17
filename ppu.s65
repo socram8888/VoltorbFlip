@@ -8,10 +8,10 @@ waitvblank:
 
 displayon:
 	lda #$1E
-	sta ppumaskval
+	sta maskval
 	jmp waitvblank
 
 displayoff:
 	lda #$00
-	sta ppumaskval
+	sta maskval
 	jmp waitvblank

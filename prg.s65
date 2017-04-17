@@ -1,6 +1,7 @@
 
 include "reg.s65"
 include "var.s65"
+include "unofficial.s65"
 
 base $C000
 

@@ -32,12 +32,46 @@ reset_handler:
 -	bit PPUSTATUS
 	bpl -
 
-	; Enable rendering again
-	lda #$1E
-	sta maskval
-
 	; Enable NMIs
 	lda #$80
 	sta PPUCTRL
 
+	; Load palette
+	lda #$3F
+	sta $301
+	lda #$00
+	sta $302
+	lda #>testpal
+	sta $303
+	lda #<testpal
+	sta $304
+	lda #$80
+	sta $300
+
+	; Reset display
+	lda #$20
+	sta $306
+	lda #$00
+	sta $307
+	lda #>deadbeef
+	sta $308
+	lda #<deadbeef
+	sta $309
+	lda #$80
+	sta $305
+
+	; Reset scroll
+	inc setscroll
+
+	jsr displayon
+
 	jmp $
+
+testpal:
+	db #$04, #$0F, #$30, #$10, #$00, #$00
+
+testpal2:
+	db #$8E, #$00, #$00
+
+deadbeef:
+	db #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$00

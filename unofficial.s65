@@ -1,0 +1,16 @@
+
+; **********************
+; * Unofficial opcodes *
+; **********************
+
+; Sets X to {(A AND X) - #value without borrow}
+macro axs imm
+	db #$CB
+	db imm
+endm
+
+; Shortcut for LDA value then TAX
+macro lax_izy addr
+	db #$B3
+	dl addr
+endm

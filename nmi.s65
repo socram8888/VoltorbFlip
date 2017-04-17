@@ -32,73 +32,105 @@ nmi_handler:
 	; nmippubufpos as index)
 	;
 	; Each entry is formed by:
-	;  - Byte 0: number of bytes to copy
+	;  - Byte 0: flags. Must be non-zero (use any non-flag bit, such as bit 0)
+	;    - Bit 7: if set, data is copied from RLE-compressed ROM, otherwise RAM
+	;    - Bit 2: if set, increment is 32 (vertical), otherwise 1 (horizontal)
 	;  - Byte 1: higher address nibble
 	;  - Byte 2: lower address nibble
-	;  - Byte 3: flags
-	;    - Bit 7: if set, data is copied from ROM, otherwise RAM
-	;    - Bit 2: if set, increment is 32 (vertical), otherwise 1 (horizontal)
-	;  - Byte 4...n: ROM address if B1.7 is set, otherwise data
+	; If copying from RAM:
+	;  - Byte 3: length
+	;  - Byte 4...n: data
+	; If copying from ROM:
+	;  - Byte 3: source address MSB
+	;  - Byte 4: source address LSB
 @nextppuload:
 	ldy nmippubufpos
 
 @nextppu:
-	; Load entry size, quit if zero
+	; Load flags, quit if zero
 	ldx $300,Y
 	beq @ppubufend
 	iny
 
-	; Load high address
-	lda $300,Y
-	iny
-	sta PPUADDR
-
-	; Load low address
-	lda $300,Y
-	iny
-	sta PPUADDR
-
-	; Set write increment
-	lda $300,Y
+	; Set increment now
+	txa
 	and #$04
 	sta PPUCTRL
 
-	; Check copy source
+	; Set PPU load address
 	lda $300,Y
 	iny
+	sta PPUADDR
+	lda $300,Y
+	iny
+	sta PPUADDR
+
+	; Check copy source
+	txa
 	bmi @fromrom
 
-	; Copy from RAM
+	; Copy from RAM - load count then copy
+	ldx $300,Y
+	iny
+
 -	lda $300,Y
 	sta PPUDATA
 	iny
 	dex
 	bne -
 
-	sty nmippubufpos
 	jmp @nextppu
 
 @fromrom:
+	; Load ROM address and prepare it for indirect-indirect addressing
+	lda $300,Y
+	iny
+	sta nmiind+1
 	lda $300,Y
 	iny
 	sta nmiind+0
 
-	lda $300,Y
-	iny
-	sta nmiind+1
-
 	sty nmippubufpos
 	ldy #0
 
--	lda (nmiind),Y
-	sta PPUDATA
+	; RLE compression is based on GBA RLUnComp, as seen on NESdev
+	; https://wiki.nesdev.com/w/index.php/Tile_compression#GBA_RLUnComp
+	;
+	; Value | Description
+	;  00   | End of stream
+	; 01-7F | Copy next n bytes to PPU
+	; 80-FF | Repeat the next byte n-126 times
+@nextrleblock:
+	lax_izy nmiind
+	beq @nextppuload
+	bmi @rlerepeated
+
+	; If 01-7F, copy "n" bytes
 	iny
+-	lda (nmiind),Y
+	iny
+	sta PPUDATA
 	dex
 	bne -
+	jmp @nextrleblock
 
-	jmp @nextppuload
+@rlerepeated:
+	iny
+
+	; Substract 126 to X
+	; "tax" before "axs" is skipped because "lax" above already made A = X
+	axs #126
+
+	; Now copy n - 126 the next read byte
+	lda (nmiind),Y
+	iny
+-	sta PPUDATA
+	dex
+	bne -
+	jmp @nextrleblock
 
 @ppubufend:
+	sty nmippubufpos
 
 	; ***********
 	; * Sprites *
