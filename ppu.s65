@@ -1,16 +1,22 @@
 
+; Busy wait for next frame
 waitvblank:
 	lda framectr
 -	cmp framectr
 	beq -
-
 	rts
 
+; Turns on display, enabling sprite and background rendering
 displayon:
+	; Wait one extra frame to ensure the NMI handler has emptied the PPU write
+	; buffer before turning on the display
+	jsr waitvblank
+
 	lda #$1E
 	sta maskval
 	jmp waitvblank
 
+; Turns off display by disabling sprite and background rendering
 displayoff:
 	lda #$00
 	sta maskval

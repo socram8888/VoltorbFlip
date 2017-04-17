@@ -74,4 +74,4 @@ testpal2:
 	db #$8E, #$00, #$00
 
 deadbeef:
-	db #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$FF, #$00
+	db #$FE, #$0D, #$FE, #$0E, #$FE, #$0A, #$FE, #$0D, #$FE, #$06, #$FE, #$0A, #$FE, #$01, #$00
