@@ -26,9 +26,6 @@ enum $000
 	lastscrollx: dsb 1
 	lastscrolly: dsb 1
 
-	; Non-zero if the NMI handler has to update OAM data
-	updateoam: dsb 1
-
 	; PPU buffer positions
 	ppubufpos: dsb 1
 	nmippubufpos: dsb 1

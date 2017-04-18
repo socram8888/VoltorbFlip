@@ -137,14 +137,10 @@ nmi_handler:
 	; ***********
 
 	; Update sprite data if needed
-	lda updateoam
-	beq +
 	lda #0
-	sta updateoam
 	sta OAMADDR
 	lda #2
 	sta OAMDMA
-+:
 
 	; ***************
 	; * Controllers *
