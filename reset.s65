@@ -48,17 +48,25 @@ reset_handler:
 	lda #$80
 	sta $300
 
-	; Reset display
-	lda #$20
-	sta $306
+	jsr waitvblank
+
 	lda #$00
-	sta $307
+	sta PPUCTRL
+
+	; Reset display
+	lda PPUSTATUS
+	lda #$20
+	sta PPUADDR
+	lda #$00
+	sta PPUADDR
 	lda #>deadbeef
-	sta $308
+	sta ppuloadptrh
 	lda #<deadbeef
-	sta $309
+	sta ppuloadptrl
+	jsr ppuloadrle
+
 	lda #$80
-	sta $305
+	sta PPUCTRL
 
 	; Reset scroll
 	inc setscroll
@@ -74,4 +82,4 @@ testpal2:
 	db #$8E, #$00, #$00
 
 deadbeef:
-	db #$FE, #$0D, #$FE, #$0E, #$FE, #$0A, #$FE, #$0D, #$FE, #$06, #$FE, #$0A, #$FE, #$01, #$00
+	incbin "boot.nam.rle"
