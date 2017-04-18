@@ -29,4 +29,9 @@ enum $000
 	; PPU buffer positions
 	ppubufpos: dsb 1
 	nmippubufpos: dsb 1
+
+	; PPU data load position
+	ppuloadptr:
+	ppuloadptrl: dsb 1
+	ppuloadptrh: dsb 1
 ende

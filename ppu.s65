@@ -21,3 +21,57 @@ displayoff:
 	lda #$00
 	sta maskval
 	jmp waitvblank
+
+; RLE compression is based on GBA RLUnComp, as seen on NESdev
+; https://wiki.nesdev.com/w/index.php/Tile_compression#GBA_RLUnComp
+;
+; Value | Description
+;  00   | End of stream
+; 01-7F | Copy next n bytes to PPU backwards
+; 80-FF | Repeat the next byte n-125 times
+ppuloadrle:
+	ldy #0
+	lax_izy ppuloadptr
+
+	; If zero, return
+	beq @rts
+
+	; If MSB is set, it's 80-FF so it's a run-length
+	bmi @runlen
+
+	; Read "n" bytes backwards
+	tay
+-	lda (ppuloadptr),Y
+	sta PPUDATA
+	dey
+	bne -
+
+	; We've read X+1 bytes
+	inx
+	txa
+	jmp @incptr
+
+@runlen:
+	; Substract 125 to X
+	; "tax" before "axs" is skipped because "lax" above already made A = X
+	axs #125
+
+	; Now copy n - 125 the next read byte
+	iny
+	lda (ppuloadptr),Y
+-	sta PPUDATA
+	dex
+	bne -
+
+	lda #2
+
+@incptr:
+	clc
+	adc ppuloadptr+0
+	sta ppuloadptr+0
+	bcc ppuloadrle
+	inc ppuloadptr+1
+	jmp ppuloadrle
+
+@rts:
+	rts
