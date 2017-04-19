@@ -10,7 +10,7 @@ RLE := $(patsubst %,%.rle,$(wildcard *.nam))
 
 all: game.nes
 
-game.nes: *.s65 chr.bin $(RLE)
+game.nes: *.s65 pattern.chr $(RLE)
 	$(ASM6) $(ASM6OPTS) game.s65 game.nes
 
 %.rle: %

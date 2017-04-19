@@ -27,4 +27,4 @@ include "prg.s65"
 ; * CHR ROM *
 ; ***********
 base $40020
-incbin "chr.bin"
+incbin "pattern.chr"
