@@ -8,14 +8,14 @@ PYTHON3 = python3
 
 RLE := $(patsubst %,%.rle,$(wildcard *.nam))
 
-all: game.nes
+all: voltorbflip.nes
 
-game.nes: *.s65 chr.bin $(RLE)
-	$(ASM6) $(ASM6OPTS) game.s65 game.nes
+voltorbflip.nes: *.s65 chr.bin $(RLE)
+	$(ASM6) $(ASM6OPTS) inesrom.s65 voltorbflip.nes
 
 %.rle: %
 	$(PYTHON3) util/rlecompress.py < $< > $@
 
 clean:
-	$(RM) game.nes
+	$(RM) voltorbflip.nes
 	$(RM) *.rle
