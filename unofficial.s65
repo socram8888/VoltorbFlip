@@ -10,7 +10,17 @@ macro axs imm
 endm
 
 ; Shortcut for LDA value then TAX
-macro lax_izy addr
+macro lax_aby addr ; LAX abs,Y
+	db #$BF
+	dl addr
+	dh addr
+endm
+
+macro lax_izy addr ; LAX (zero),Y
+	if addr > #$FF
+		error "Address not in zero page"
+	endif
+
 	db #$B3
 	dl addr
 endm

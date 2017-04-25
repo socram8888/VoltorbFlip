@@ -65,7 +65,7 @@ nmi_handler:
 	sta PPUADDR
 
 	; Load flags
-	lax_izy ppuwritebuf
+	lax_aby ppuwritebuf
 	iny
 
 	; Set vertical/horizontal increase
@@ -77,7 +77,7 @@ nmi_handler:
 	bmi @fromrle
 
 	; Load length
-	lax_izy ppuwritebuf,Y
+	lax_aby ppuwritebuf,Y
 	iny
 
 	; Copy data now
