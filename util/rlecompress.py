@@ -52,8 +52,5 @@ def compress(infile, outfile):
 
 	output_end(outfile)
 
-def main():
-	compress(sys.stdin.buffer, sys.stdout.buffer)
-
 if __name__ == '__main__':
-	main()
+	compress(sys.stdin.buffer, sys.stdout.buffer)
