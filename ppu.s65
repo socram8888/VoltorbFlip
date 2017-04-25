@@ -80,26 +80,37 @@ ppuloadrle:
 
 ; Begins a new write to the PPU buffer for "ppubufwritelen" bytes. May lock
 ; if the PPU buffer doesn't have enough space.
+;
+; Y is set to the first free position in the write buffer.
 ppubufwritebegin:
+	ldy ppubufwritepos
+
+@recheck:
 	; Check if NMI has finished writing all data to reset the pointers, which
 	; is when ppubufreadpos equals to ppubufwritepos.
-	lda ppubufreadpos
-	cmp ppubufwritepos
+	cpy ppubufreadpos
 	bne @notdone
 
 	; NMI thread processes PPU buffer until the read pointer equals or is greater
 	; than the write pointer, so it is very important to clear the later first.
-	lda #0
-	sta ppubufwritepos
-	sta ppubufreadpos
+	ldy #0
+	sty ppubufwritepos
+	sty ppubufreadpos
 
 @notdone:
 	; Check if we have enough space in the buffer.
-	lda #$40
-	sec
-	sbc ppubufwritepos
-	cmp ppubufwritelen
+	tya
+	clc
+	adc ppubufwritelen
+	cmp #$40
 
 	; If not, re-run
-	bcc ppubufwritebegin
+	bcs @recheck
+	rts
+
+ppubufwritesum:
+	clc
+	lda ppubufwritelen
+	adc ppubufwritepos
+	sta ppubufwritepos
 	rts

@@ -1,6 +1,6 @@
 
+; Init code from https://wiki.nesdev.com/w/index.php/Init_code
 reset_handler:
-	; Init code from https://wiki.nesdev.com/w/index.php/Init_code
 	sei			; Disable interrupts
 	cld			; Disable decimal mode
 
@@ -18,7 +18,7 @@ reset_handler:
 	; Clear RAM
 	txa
 -	sta $0000,x
-	; No need to clear stack
+	sta $0100,x
 	sta $0200,x
 	sta $0300,x
 	sta $0400,x
@@ -36,50 +36,43 @@ reset_handler:
 	lda #$80
 	sta PPUCTRL
 
-	; Load palette
+	; Load palette and nametable
+	lda #10
+	sta ppubufwritelen
+	jsr ppubufwritebegin
+
 	lda #$3F
-	sta $301
+	sta (ppuwritebuf+0),y
 	lda #$00
-	sta $302
-	lda #>testpal
-	sta $303
-	lda #<testpal
-	sta $304
-	lda #$80
-	sta $300
+	sta (ppuwritebuf+1),y
+	lda #$80 ; From ROM, horizontal
+	sta (ppuwritebuf+2),y
+	lda #>bootpal
+	sta (ppuwritebuf+3),y
+	lda #<bootpal
+	sta (ppuwritebuf+4),y
 
-	jsr waitvblank
-
-	lda #$00
-	sta PPUCTRL
-
-	; Reset display
-	lda PPUSTATUS
 	lda #$20
-	sta PPUADDR
+	sta (ppuwritebuf+5),y
 	lda #$00
-	sta PPUADDR
-	lda #>deadbeef
-	sta ppuloadptrh
-	lda #<deadbeef
-	sta ppuloadptrl
-	jsr ppuloadrle
+	sta (ppuwritebuf+6),y
+	lda #$80 ; From ROM, horizontal
+	sta (ppuwritebuf+7),y
+	lda #>bootnam
+	sta (ppuwritebuf+8),y
+	lda #<bootnam
+	sta (ppuwritebuf+9),y
 
-	lda #$80
-	sta PPUCTRL
-
-	; Reset scroll
+	jsr ppubufwritesum
+	jsr waitvblank
 	inc setscroll
-
-	jsr displayon
+	lda #$1E
+	sta maskval
 
 	jmp $
 
-testpal:
-	db #$04, #$0F, #$30, #$10, #$00, #$00
+bootpal:
+	incbin "boot.pal.rle"
 
-testpal2:
-	db #$8E, #$00, #$00
-
-deadbeef:
+bootnam:
 	incbin "boot.nam.rle"
