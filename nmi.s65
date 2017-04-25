@@ -53,8 +53,8 @@ nmi_handler:
 
 @doppubuf:
 	; If Y is equal (or larger, which should never happen), break
-	cpy ppubufpos
-	bcs ppubufend
+	cpy ppubufwritepos
+	bcs @ppubufend
 
 	; Set PPU load address
 	lda ppuwritebuf,Y
