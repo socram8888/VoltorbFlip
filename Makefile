@@ -10,7 +10,7 @@ RLE := $(patsubst %,%.rle,$(wildcard *.nam))
 
 all: voltorbflip.nes
 
-voltorbflip.nes: *.s65 chr.bin $(RLE)
+voltorbflip.nes: *.s65 pattern.chr $(RLE)
 	$(ASM6) $(ASM6OPTS) inesrom.s65 voltorbflip.nes
 
 %.rle: %
