@@ -16,8 +16,10 @@ nmi_handler:
 	; Reset PPU address and VBlank flag
 	lda PPUSTATUS
 
-	; Enable/disable PPU rendering
-	lda maskval
+	; Disable PPU rendering to avoid glitches if we run out of VBlank time
+	; It's better IMHO to make the screen blink for a single frame, than
+	; show a completely screwed up nametable for the whole game duration.
+	lda #$00
 	sta PPUMASK
 
 	; *****************
@@ -27,110 +29,87 @@ nmi_handler:
 	; This is an implementation of the PPU buffer explained in "The frame
 	; and NMIs" by Disch
 	;
-	; Page 3 ($0300-$03FF) is used as a circular buffer, with the main thread
-	; writing (using ppubufpos as index) and the NMI thread reading (using
-	; nmippubufpos as index)
+	; Page 3 ($0300-$033F) is used as a write buffer, starting at nmippubufpos,
+	; (the position at which the NMI thread must start reading), until it
+	; reaches ppubufpos (the position after the last byte written by the main
+	; thread).
 	;
 	; Each entry is formed by:
-	;  - Byte 0: flags. Must be non-zero (use any non-flag bit, such as bit 0)
-	;    - Bit 7: if set, data is copied from RLE-compressed ROM, otherwise RAM
+	;  - Byte 0: PPU high address
+	;  - Byte 1: PPU low address
+	;  - Byte 2: flags
+	;    - Bit 7: if set, data is from RLE-encoded data from ROM, else RAM
 	;    - Bit 2: if set, increment is 32 (vertical), otherwise 1 (horizontal)
-	;  - Byte 1: higher address nibble
-	;  - Byte 2: lower address nibble
-	; If copying from RAM:
+	;
+	; If from RAM:
 	;  - Byte 3: length
 	;  - Byte 4...n: data
-	; If copying from ROM:
-	;  - Byte 3: source address MSB
-	;  - Byte 4: source address LSB
-@nextppuload:
-	ldy nmippubufpos
+	;
+	; If from ROM:
+	;  - Byte 3: ROM high address
+	;  - Byte 4: ROM low address
+@doppubufy:
+	ldy ppubufreadpos
 
-@nextppu:
-	; Load flags, quit if zero
-	ldx $300,Y
-	beq @ppubufend
+@doppubuf:
+	; If Y is equal (or larger, which should never happen), break
+	cpy ppubufpos
+	bcs ppubufend
+
+	; Set PPU load address
+	lda ppuwritebuf,Y
+	iny
+	sta PPUADDR
+	lda ppuwritebuf,Y
+	iny
+	sta PPUADDR
+
+	; Load flags
+	lax_izy ppuwritebuf
 	iny
 
-	; Set increment now
-	txa
+	; Set vertical/horizontal increase
 	and #$04
 	sta PPUCTRL
 
-	; Set PPU load address
-	lda $300,Y
-	iny
-	sta PPUADDR
-	lda $300,Y
-	iny
-	sta PPUADDR
-
-	; Check copy source
+	; Check if from ROM
 	txa
-	bmi @fromrom
+	bmi @fromrle
 
-	; Copy from RAM - load count then copy
-	ldx $300,Y
+	; Load length
+	lax_izy ppuwritebuf,Y
 	iny
 
--	lda $300,Y
+	; Copy data now
+-	lda ppuwritebuf,Y
 	sta PPUDATA
 	iny
 	dex
 	bne -
 
-	jmp @nextppu
+	; Do next
+	jmp @doppubuf
 
-@fromrom:
-	; Load ROM address and prepare it for indirect-indirect addressing
-	lda $300,Y
+@fromrle:
+	; Load ROM address
+	lda ppuwritebuf,Y
 	iny
-	sta nmiind+1
-	lda $300,Y
+	sta ppuloadptrh
+	lda ppuwritebuf,Y
 	iny
-	sta nmiind+0
+	sta ppuloadptrl
 
-	sty nmippubufpos
-	ldy #0
+	; Save current Y
+	sty ppubufreadpos
 
-	; RLE compression is based on GBA RLUnComp, as seen on NESdev
-	; https://wiki.nesdev.com/w/index.php/Tile_compression#GBA_RLUnComp
-	;
-	; Value | Description
-	;  00   | End of stream
-	; 01-7F | Copy next n bytes to PPU
-	; 80-FF | Repeat the next byte n-126 times
-@nextrleblock:
-	lax_izy nmiind
-	beq @nextppuload
-	bmi @rlerepeated
+	; Call RLE load
+	jsr ppuloadrle
 
-	; If 01-7F, copy "n" bytes
-	iny
--	lda (nmiind),Y
-	iny
-	sta PPUDATA
-	dex
-	bne -
-	jmp @nextrleblock
-
-@rlerepeated:
-	iny
-
-	; Substract 126 to X
-	; "tax" before "axs" is skipped because "lax" above already made A = X
-	axs #126
-
-	; Now copy n - 126 the next read byte
-	lda (nmiind),Y
-	iny
--	sta PPUDATA
-	dex
-	bne -
-	jmp @nextrleblock
+	; Do next
+	jmp @doppubufy
 
 @ppubufend:
-	sty nmippubufpos
+	sty ppubufreadpos
 
 	; ***********
 	; * Sprites *
@@ -141,28 +120,6 @@ nmi_handler:
 	sta OAMADDR
 	lda #2
 	sta OAMDMA
-
-	; ***************
-	; * Controllers *
-	; ***************
-
-	; Read controllers using NESdev ring trick
-	ldx #1
-	stx joy2pressed
-
-	; Strobe shift register
-	stx JOY1
-	dex
-	stx JOY1
-
-	; Read controllers
--	lda JOY1
-	lsr A
-	rol joy1pressed
-	lda JOY2
-	lsr A
-	rol joy2pressed
-	bcc -
 
 	; *************
 	; * Scrolling *
@@ -191,6 +148,32 @@ nmi_handler:
 	lda lastscrolly
 	sta PPUSCROLL
 @updatedscroll:
+
+	; We've finished doing graphic stuff, re-enable rendering
+	lda maskval
+	sta PPUMASK
+
+	; ***************
+	; * Controllers *
+	; ***************
+
+	; Read controllers using NESdev ring trick
+	ldx #1
+	stx joy2pressed
+
+	; Strobe shift register
+	stx JOY1
+	dex
+	stx JOY1
+
+	; Read controllers
+-	lda JOY1
+	lsr A
+	rol joy1pressed
+	lda JOY2
+	lsr A
+	rol joy2pressed
+	bcc -
 
 	; Re-enable NMI interruptions
 	lda #$80
