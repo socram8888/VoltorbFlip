@@ -3,9 +3,6 @@
 ; * PAGE 0 RAM *
 ; **************
 enum $000
-	; Indirect-addressing for NMI handler
-	nmiind: dsb 2
-
 	; Buttons pressed on each pad
 	joy1pressed: dsb 1
 	joy2pressed: dsb 1
@@ -26,12 +23,32 @@ enum $000
 	lastscrollx: dsb 1
 	lastscrolly: dsb 1
 
+	; Numbers of bytes to be written to the PPU buffer
+	ppubufwritelen: dsb 1
+
 	; PPU buffer positions
-	ppubufpos: dsb 1
-	nmippubufpos: dsb 1
+	ppubufreadpos: dsb 1
+	ppubufwritepos: dsb 1
 
 	; PPU data load position
 	ppuloadptr:
 	ppuloadptrl: dsb 1
 	ppuloadptrh: dsb 1
+ende
+
+; **************
+; * PAGE 2 RAM *
+; **************
+enum $200
+	; Shadow OAM
+	; TODO: describe each entry
+	shadowoam: dsb 256
+ende
+
+; **************
+; * PAGE 3 RAM *
+; **************
+enum $300
+	; PPU write buffer - see "nmi.s65" for more info
+	ppuwritebuf: dsb 64
 ende
